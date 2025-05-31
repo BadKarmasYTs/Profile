@@ -5,119 +5,175 @@
   <title>My Roblox Hub</title>
   <style>
     body {
-      font-family: 'Segoe UI', sans-serif;
-      background: #f2f2f2;
       margin: 0;
-      padding: 20px;
-      text-align: center;
+      padding: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(270deg, #ff7e5f, #feb47b);
+      background-size: 400% 400%;
+      animation: gradientBG 15s ease infinite;
       color: #333;
     }
-    .card {
-      background: white;
-      border-radius: 12px;
+
+    @keyframes gradientBG {
+      0% {background-position: 0% 50%;}
+      50% {background-position: 100% 50%;}
+      100% {background-position: 0% 50%;}
+    }
+
+    .container {
+      max-width: 900px;
+      margin: auto;
       padding: 20px;
-      max-width: 600px;
-      margin: 20px auto;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
     }
-    img.avatar {
+
+    .profile {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .avatar {
+      width: 120px;
+      height: 120px;
       border-radius: 50%;
-      margin-bottom: 15px;
+      animation: rotateAvatar 10s linear infinite;
     }
-    h1 {
-      margin: 0;
-      font-size: 28px;
+
+    @keyframes rotateAvatar {
+      from {transform: rotate(0deg);}
+      to {transform: rotate(360deg);}
     }
-    p {
-      font-size: 16px;
+
+    .username {
+      font-size: 2em;
+      margin: 10px 0;
+    }
+
+    .description {
+      font-size: 1.2em;
       color: #555;
     }
-    .game-list {
+
+    .status {
+      margin-top: 10px;
+      font-weight: bold;
+    }
+
+    .games {
       display: flex;
       flex-wrap: wrap;
+      gap: 20px;
       justify-content: center;
-      gap: 10px;
     }
+
     .game-card {
       background: #fff;
-      border-radius: 8px;
-      width: 150px;
-      padding: 10px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-      transition: 0.2s;
+      border-radius: 10px;
+      width: 200px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      transition: transform 0.3s;
+      text-decoration: none;
+      color: inherit;
     }
+
     .game-card:hover {
-      transform: scale(1.03);
+      transform: scale(1.05);
     }
-    .game-card img {
+
+    .game-thumbnail {
       width: 100%;
-      border-radius: 6px;
+      border-top-left-radius: 10px;
+      border-top-right-radius: 10px;
+    }
+
+    .game-title {
+      padding: 10px;
+      font-weight: bold;
+      text-align: center;
+    }
+
+    @media (max-width: 600px) {
+      .games {
+        flex-direction: column;
+        align-items: center;
+      }
     }
   </style>
 </head>
 <body>
+  <div class="container">
+    <div class="profile">
+      <img id="avatar" class="avatar" src="" alt="Avatar">
+      <div id="username" class="username">Loading...</div>
+      <div id="description" class="description">Fetching profile...</div>
+      <div id="status" class="status"></div>
+    </div>
+    <div class="games" id="games">
+      <!-- Game cards will be injected here -->
+    </div>
+  </div>
 
-<div class="card" id="profile">
-  <img class="avatar" id="avatar" src="" width="100" height="100">
-  <h1 id="username">Loading...</h1>
-  <p id="desc">Fetching profile...</p>
-  <p id="status"></p>
-</div>
+  <script>
+    const userId = 3690340936;
 
-<div class="card">
-  <h2>My Games</h2>
-  <div class="game-list" id="games"></div>
-</div>
+    async function fetchProfile() {
+      try {
+        const [userRes, avatarRes, presenceRes] = await Promise.all([
+          fetch(`https://users.roproxy.com/v1/users/${userId}`),
+          fetch(`https://thumbnails.roproxy.com/v1/users/avatar?userIds=${userId}&size=420x420&format=Png&isCircular=true`),
+          fetch(`https://presence.roproxy.com/v1/presence/users`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ userIds: [userId] })
+          })
+        ]);
 
-<script>
-  const userId = 3690340936;
+        const userData = await userRes.json();
+        const avatarData = await avatarRes.json();
+        const presenceData = await presenceRes.json();
 
-  async function fetchProfile() {
-    const [user, avatar, status] = await Promise.all([
-      fetch(`https://users.roproxy.com/v1/users/${userId}`).then(res => res.json()),
-      fetch(`https://thumbnails.roproxy.com/v1/users/avatar?userIds=${userId}&size=420x420&format=Png&isCircular=true`).then(res => res.json()),
-      fetch(`https://presence.roproxy.com/v1/presence/users`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userIds: [userId] })
-      }).then(res => res.json())
-    ]);
+        document.getElementById("username").textContent = userData.name;
+        document.getElementById("description").textContent = userData.description || "No description set.";
+        document.getElementById("avatar").src = avatarData.data[0].imageUrl;
 
-    document.getElementById("username").textContent = user.name;
-    document.getElementById("desc").textContent = user.description || "No description set.";
-    document.getElementById("avatar").src = avatar.data[0].imageUrl;
-
-    const presence = status.userPresences[0];
-    document.getElementById("status").textContent =
-      presence.userPresenceType === 2 ? `Currently playing: ${presence.lastLocation}` :
-      "Offline";
-  }
-
-  async function fetchGames() {
-    const res = await fetch(`https://games.roproxy.com/v2/users/${userId}/games?limit=6&sortOrder=Asc`);
-    const data = await res.json();
-    const gameContainer = document.getElementById("games");
-
-    for (const game of data.data) {
-      const thumbRes = await fetch(`https://thumbnails.roproxy.com/v1/places/thumbnails?placeIds=${game.id}&size=480x270&format=png`);
-      const thumbData = await thumbRes.json();
-      const imgURL = thumbData.data[0]?.imageUrl;
-
-      const div = document.createElement("div");
-      div.className = "game-card";
-      div.innerHTML = `
-        <a href="https://www.roblox.com/games/${game.id}" target="_blank">
-          <img src="${imgURL}" alt="${game.name}">
-          <p>${game.name}</p>
-        </a>
-      `;
-      gameContainer.appendChild(div);
+        const presence = presenceData.userPresences[0];
+        let statusText = "Offline";
+        if (presence.userPresenceType === 1) statusText = "Online";
+        else if (presence.userPresenceType === 2) statusText = `In Game: ${presence.lastLocation}`;
+        else if (presence.userPresenceType === 3) statusText = "In Studio";
+        document.getElementById("status").textContent = statusText;
+      } catch (error) {
+        console.error("Error fetching profile:", error);
+      }
     }
-  }
 
-  fetchProfile();
-  fetchGames();
-</script>
+    async function fetchGames() {
+      try {
+        const gamesRes = await fetch(`https://games.roproxy.com/v2/users/${userId}/games?limit=10&sortOrder=Asc`);
+        const gamesData = await gamesRes.json();
+        const gamesContainer = document.getElementById("games");
 
+        for (const game of gamesData.data) {
+          const thumbRes = await fetch(`https://thumbnails.roproxy.com/v1/places/thumbnails?placeIds=${game.id}&size=480x270&format=png`);
+          const thumbData = await thumbRes.json();
+          const imgURL = thumbData.data[0]?.imageUrl || "";
+
+          const gameCard = document.createElement("a");
+          gameCard.className = "game-card";
+          gameCard.href = `https://www.roblox.com/games/${game.id}`;
+          gameCard.target = "_blank";
+          gameCard.innerHTML = `
+            <img class="game-thumbnail" src="${imgURL}" alt="${game.name}">
+            <div class="game-title">${game.name}</div>
+          `;
+          gamesContainer.appendChild(gameCard);
+        }
+      } catch (error) {
+        console.error("Error fetching games:", error);
+      }
+    }
+
+    fetchProfile();
+    fetchGames();
+  </script>
 </body>
 </html>
