@@ -70,13 +70,13 @@
 </div>
 
 <script>
-  const userId = 3690340936; // <- Replace with your actual Roblox user ID
+  const userId = 3690340936;
 
   async function fetchProfile() {
     const [user, avatar, status] = await Promise.all([
-      fetch(`https://users.roblox.com/v1/users/${userId}`).then(res => res.json()),
-      fetch(`https://thumbnails.roblox.com/v1/users/avatar?userIds=${userId}&size=420x420&format=Png&isCircular=true`).then(res => res.json()),
-      fetch(`https://presence.roblox.com/v1/presence/users`, {
+      fetch(`https://users.roproxy.com/v1/users/${userId}`).then(res => res.json()),
+      fetch(`https://thumbnails.roproxy.com/v1/users/avatar?userIds=${userId}&size=420x420&format=Png&isCircular=true`).then(res => res.json()),
+      fetch(`https://presence.roproxy.com/v1/presence/users`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userIds: [userId] })
@@ -94,12 +94,12 @@
   }
 
   async function fetchGames() {
-    const res = await fetch(`https://games.roblox.com/v2/users/${userId}/games?limit=6&sortOrder=Asc`);
+    const res = await fetch(`https://games.roproxy.com/v2/users/${userId}/games?limit=6&sortOrder=Asc`);
     const data = await res.json();
     const gameContainer = document.getElementById("games");
 
     for (const game of data.data) {
-      const thumbRes = await fetch(`https://thumbnails.roblox.com/v1/places/thumbnails?placeIds=${game.id}&size=480x270&format=png`);
+      const thumbRes = await fetch(`https://thumbnails.roproxy.com/v1/places/thumbnails?placeIds=${game.id}&size=480x270&format=png`);
       const thumbData = await thumbRes.json();
       const imgURL = thumbData.data[0]?.imageUrl;
 
