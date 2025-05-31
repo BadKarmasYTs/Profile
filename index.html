@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Roblox Profile Viewer</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        input { padding: 5px; }
+        button { padding: 5px 10px; }
+        .profile { margin-top: 20px; }
+        .avatar { width: 150px; height: 150px; }
+    </style>
+</head>
+<body>
+    <h1>Roblox Profile Viewer</h1>
+    <input type="text" id="username" placeholder="Enter Roblox Username">
+    <button onclick="fetchProfile()">Fetch Profile</button>
+    <div class="profile" id="profile"></div>
+
+    <script>
+        async function fetchProfile() {
+            const username = document.getElementById('username').value.trim();
+            if (!username) {
+                alert('Please enter a username.');
+                return;
+            }
+
+            const profileDiv = document.getElementById('profile');
+            profileDiv.innerHTML = 'Loading...';
+
+            try {
+                // Get user ID
+                const userRes = await fetch(`https://users.roblox.com/v1/usernames/users`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ usernames: [username] })
+                });
+                const userData = await userRes.json();
+                if (!userData.data || userData.data.length === 0) {
+                    profileDiv.innerHTML = 'User not found.';
+                    return;
+                }
+                const userId = userData.data[0].id;
+
+                // Get user profile
+                const profileRes = await fetch(`https://users.roblox.com/v1/users/${userId}`);
+                const profileData = await profileRes.json();
+
+                // Get avatar
+                const avatarRes = await fetch(`https://thumbnails.roblox.com/v1/users/avatar?userIds=${userId}&size=150x150&format=Png`);
+                const avatarData = await avatarRes.json();
+                const avatarUrl = avatarData.data[0].imageUrl;
+
+                // Get badges
+                const badgesRes = await fetch(`https://badges.roblox.com/v1/users/${userId}/badges?limit=10`);
+                const badgesData = await badgesRes.json();
+                const badges = badgesData.data.map(badge => badge.name).join(', ') || 'None';
+
+                // Get collectibles
+                const collectiblesRes = await fetch(`https://inventory.roblox.com/v1/users/${userId}/assets/collectibles?limit=100`);
+                const collectiblesData = await collectiblesRes.json();
+                const rap = collectiblesData.data.reduce((sum, item) => sum + (item.recentAveragePrice || 0), 0);
+
+                // Get previous usernames
+                const prevNamesRes = await fetch(`https://users.roblox.com/v1/users/${userId}/username-history?limit=10`);
+                const prevNamesData = await prevNamesRes.json();
+                const prevNames = prevNamesData.data.map(entry => entry.name).join(', ') || 'None';
+
+                // Get presence
+                const presenceRes = await fetch(`https://presence.roblox.com/v1/presence/users`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userIds: [userId] })
+                });
+                const presenceData = await presenceRes.json();
+                const userPresence = presenceData.userPresences[0];
+                const status = userPresence.userPresenceType === 2 ? 'Online' : 'Offline';
+
+                // Get ban status
+                const banRes = await fetch(`https://users.roblox.com/v1/users/${userId}`);
+                const banData = await banRes.json();
+                const isBanned = banData.isBanned ? 'Yes' : 'No';
+
+                // Display profile
+                profileDiv.innerHTML = `
+                    <img src="${avatarUrl}" alt="Avatar" class="avatar"><br>
+                    <strong>Username:</strong> ${profileData.name}<br>
+                    <strong>Description:</strong> ${profileData.description || 'None'}<br>
+                    <strong>Status:</strong> ${status}<br>
+                    <strong>RAP:</strong> ${rap}<br>
+                    <strong>Badges:</strong> ${badges}<br>
+                    <strong>Previous Usernames:</strong> ${prevNames}<br>
+                    <strong>Banned:</strong> ${isBanned}
+                `;
+            } catch (error) {
+                console.error(error);
+                profileDiv.innerHTML = 'An error occurred while fetching the profile.';
+            }
+        }
+    </script>
+</body>
+</html>
